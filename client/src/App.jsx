@@ -1,9 +1,17 @@
-function App() {
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import Landing from "./pages/Landing";
+import Bot from "./pages/Bot";
+
+const App = () => {
   return (
-    <div className="bg-slate-800 min-h-screen min-w-screen">
-      <p></p>
-    </div>
+    <Router>
+      <Routes>
+        <Route path="/home" element={<Landing />}></Route>
+        <Route path="/bot" element={<Bot />}></Route>
+        <Route path="/*" element={<Landing />}></Route>
+      </Routes>
+    </Router>
   );
-}
+};
 
 export default App;
