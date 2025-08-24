@@ -10,6 +10,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework import status
+from .script import process_query_once
 
 import spacy
 from rapidfuzz import process, fuzz
@@ -268,3 +269,25 @@ def extract_location_and_fetch_images(request):
         "image_count": len(abs_urls),
         "images": abs_urls
     }, status=status.HTTP_200_OK)
+
+@api_view(["POST"])
+def query_insight(request):
+    """
+    POST body JSON: { "query": "What is the level of urbanisation in Pune?" }
+    Returns the full process_query_once result as JSON.
+    """
+    q = request.data.get("query")
+    if not q:
+        return Response({"error": "missing 'query' in request body"}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        result = process_query_once(
+            q,
+            gemini_api_key="AIzaSyB30VO9snpNYH-3i2gyMNC3ZY5fLbAbwJ8",
+            save=False,
+            verbose=False
+        )
+        return Response(result, status=status.HTTP_200_OK)
+    except Exception as e:
+        return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
