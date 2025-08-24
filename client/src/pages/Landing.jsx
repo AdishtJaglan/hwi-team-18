@@ -7,6 +7,7 @@ import {
   useMapEvents,
 } from "react-leaflet";
 
+import FloatingLLMNav from "../components/LLMicon";
 import analyzeBBox from "../utils/script";
 
 import L from "leaflet";
@@ -208,8 +209,9 @@ const Landing = () => {
 
   return (
     <div className="h-screen min-w-screen flex bg-black text-slate-100 font-sans">
+      <FloatingLLMNav />
       {/* Main Map Area */}
-      <main className="flex-1 relative">
+      <main className="flex-1 relative z-20">
         <MapContainer
           center={DEFAULT_CENTER}
           zoom={DEFAULT_ZOOM}
