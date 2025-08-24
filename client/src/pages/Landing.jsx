@@ -76,6 +76,56 @@ const findLongestDistance = (coordinates) => {
   return [lon1, lat1, lon2, lat2];
 };
 
+const MetricsDisplay = ({ metrics }) => {
+  // Define which metrics to show, their labels, and units for easy configuration
+  const displayMetrics = [
+    { key: "area_km2", label: "Total Area", unit: "km²" },
+    { key: "SocioEconScore", label: "Socio-Econ Score", unit: "/ 10" },
+    { key: "roads_km", label: "Roads Length", unit: "km" },
+    { key: "buildings_count", label: "Building Count", unit: "" },
+    { key: "roads_km_per_km2", label: "Road Density", unit: "km/km²" },
+    { key: "buildings_per_km2", label: "Building Density", unit: "per km²" },
+  ];
+
+  return (
+    <div className="grid grid-cols-2 gap-4 mt-2">
+      {displayMetrics.map((metric) => (
+        <div key={metric.key} className="bg-slate-900/70 p-3 rounded-lg">
+          <div className="text-xs text-slate-400">{metric.label}</div>
+          <div className="text-xl font-semibold text-cyan-300">
+            {/* Check if metric exists before formatting */}
+            {metrics[metric.key] !== undefined
+              ? Number(metrics[metric.key]).toFixed(2)
+              : "N/A"}
+            <span className="text-sm text-cyan-500 ml-1">{metric.unit}</span>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+};
+
+const AnalysisDisplay = ({ text }) => {
+  // Simple parser to handle newlines and bolding with asterisks
+  const formattedText = text.split("\n").map((line, index) => {
+    // Skip empty lines
+    if (line.trim() === "") {
+      return null;
+    }
+    // Handle bolding
+    const parts = line
+      .split("*")
+      .map((part, i) => (i % 2 === 1 ? <strong key={i}>{part}</strong> : part));
+    return (
+      <p key={index} className="mb-2">
+        {parts}
+      </p>
+    );
+  });
+
+  return <div>{formattedText}</div>;
+};
+
 const Landing = () => {
   const mapRef = useRef(null);
   const [points, setPoints] = useState([]);
@@ -90,30 +140,23 @@ const Landing = () => {
 
     const pts = findLongestDistance(points);
     const { metrics, analysis } = await analyzeBBox(pts);
-    console.log(metrics);
-    console.log(analysis);
 
-    const results = [
+    const newInsights = [
       {
-        type: "success",
-        title: "Area Calculated",
-        content:
-          "The selected polygon covers an area of 45.8 square kilometers.",
+        id: "metrics",
+        type: "metrics",
+        title: "Key Metrics at a Glance",
+        content: <MetricsDisplay metrics={metrics} />,
       },
       {
-        type: "info",
-        title: "Population Density",
-        content: "Estimated population density is 2,300 people per sq. km.",
-      },
-      {
-        type: "warning",
-        title: "Data Anomaly",
-        content:
-          "Elevation data for one point seems inconsistent with the surrounding area.",
+        id: "analysis",
+        type: "analysis",
+        title: "AI-Powered Analysis",
+        content: <AnalysisDisplay text={analysis} />,
       },
     ];
 
-    setInsights(results);
+    setInsights(newInsights);
     setIsLoading(false);
   };
 
@@ -308,23 +351,21 @@ const Landing = () => {
                 </div>
               ) : insights.length > 0 ? (
                 <div className="space-y-4">
-                  {insights.map((item, i) => (
+                  {insights.map((item) => (
                     <div
-                      key={i}
+                      key={item.id}
                       className={`p-4 rounded-lg bg-slate-800/50 border border-slate-700 ${
-                        item.type === "warning"
-                          ? "border-l-4 border-l-yellow-400"
-                          : item.type === "success"
-                          ? "border-l-4 border-l-green-400"
-                          : "border-l-4 border-l-cyan-400"
+                        item.type === "analysis"
+                          ? "border-l-4 border-l-cyan-400"
+                          : ""
                       }`}
                     >
                       <h3 className="font-semibold text-slate-200">
                         {item.title}
                       </h3>
-                      <p className="text-sm text-slate-400 mt-1">
+                      <div className="text-sm text-slate-400 mt-1">
                         {item.content}
-                      </p>
+                      </div>
                     </div>
                   ))}
                 </div>
