@@ -231,13 +231,11 @@ Write as if you're explaining to a community leader. Keep it simple and practica
 // ----------------------- Main exported function -----------------------
 export async function analyzeBBox(bbox, options = {}) {
   const {
-    apiKey = "AIzaSyAlc9w0Umwpi-O_T0UTl7pjYd0EHXhtCEM",
+    apiKey = "",
     useGemini = true,
     overpassRetries = 1,
     model = "gemini-2.0-flash",
   } = options;
-  console.log(bbox);
-  console.log(options);
 
   if (!Array.isArray(bbox) || bbox.length !== 4) {
     throw new Error("bbox must be an array [minLon, minLat, maxLon, maxLat]");

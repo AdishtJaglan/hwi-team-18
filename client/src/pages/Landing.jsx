@@ -156,7 +156,9 @@ const Landing = () => {
     setInsights([]);
 
     const pts = findLongestDistance(points);
-    const { metrics, analysis } = await analyzeBBox(pts);
+    const { metrics, analysis } = await analyzeBBox(pts, {
+      apiKey: import.meta.env.VITE_GEMINI_KEY,
+    });
 
     const newInsights = [
       {
