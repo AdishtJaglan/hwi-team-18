@@ -564,10 +564,7 @@ data = {}
 cities = ["Pune", "Mumbai", "Delhi", "Bangalore", "Chennai", "Kolkata", "Hyderabad", "Ahmedabad", "Jaipur", "Lucknow", "Surat", "Kanpur", "Nagpur", "Indore", "Thane", "Bhopal", "Visakhapatnam", "Patna", "Vadodara", "Ghaziabad", "Ludhiana", "Agra", "Nashik", "Faridabad", "Meerut", "Rajkot", "Kalyan-Dombivali", "Vasai-Virar", "Varanasi", "Srinagar", "Aurangabad", "Dhanbad", "Amritsar", "Allahabad", "Ranchi", "Howrah", "Coimbatore", "Jabalpur", "Gwalior", "Vijayawada", "Jodhpur", "Madurai", "Raipur", "Kota", "Guwahati", "Chandigarh", "Solapur", "Hubli-Dharwad", "Mysore", "Tiruchirappalli"]
 for city in cities:
     bounds = get_city_bounds(city, "India")
-        # ---------- BBOX + AREA ----------
-    print(bounds)
     bbox = [bounds['min_lon'] , bounds['min_lat'] , bounds['max_lon'] , bounds['max_lat']]
-    print(bbox)
     poly = bbox_polygon(bbox)
     aoi = gpd.GeoDataFrame([{"geometry": poly}], crs="EPSG:4326")
     area_km2 = aoi.to_crs(3857).area.iloc[0] / 1e6
@@ -600,23 +597,15 @@ for city in cities:
     out body;
     """
 
-    print("🛰️  Enhanced Satellite Infrastructure Analysis")
-    print("=" * 50)
-    print("📡 Fetching OpenStreetMap data...")
-
     roads = osm_to_gdf(overpass(Q_ROADS))
-    print("here1")
     build = osm_to_gdf(overpass(Q_BUILD))
-    print("here2")
     amen  = osm_to_gdf(overpass(Q_AMEN), geom_types=("node",))
-    print("here3")
 
     # clip to bbox (robust)
     roads = gpd.overlay(roads, aoi, how="intersection") if not roads.empty else roads
     build = gpd.overlay(build, aoi, how="intersection") if not build.empty else build
     amen  = gpd.overlay(amen,  aoi, how="intersection") if not amen.empty  else amen
 
-    print("✅ Data collection completed")
 
     # ---------- METRICS ----------
     road_km = length_km(roads)
