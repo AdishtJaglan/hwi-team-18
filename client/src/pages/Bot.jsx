@@ -303,7 +303,6 @@ export default function ChatApp() {
   ]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [isSidebarOpen, setSidebarOpen] = useState(true);
   const chatEndRef = useRef(null);
 
   useEffect(() => {
@@ -372,39 +371,14 @@ export default function ChatApp() {
       />
       <div className="absolute inset-0 z-0 bg-gradient-to-b from-transparent via-transparent to-black" />
 
-      {/* --- Collapsible Sidebar (unchanged) --- */}
-      <aside
-        className={`md:flex flex-col bg-black/30 backdrop-blur-lg border-r border-white/5 z-20 transition-all duration-300 ease-in-out overflow-hidden ${
-          isSidebarOpen ? "w-72 p-4" : "w-0 p-0"
-        }`}
-      >
-        <button className="flex items-center justify-center gap-2 w-full p-3 mb-6 rounded-lg text-lg font-semibold bg-gradient-to-r from-cyan-500 to-blue-500 text-white hover:opacity-90 transition-opacity">
-          <PlusIcon /> New Chat
-        </button>
-        <nav className="flex-1 space-y-2">
-          <a
-            href="#"
-            className="flex items-center p-3 text-zinc-300 rounded-lg bg-white/5 font-medium truncate"
-          >
-            React & Tailwind UI
-          </a>
-          <a
-            href="#"
-            className="flex items-center p-3 text-zinc-400 rounded-lg hover:bg-white/5 transition-colors truncate"
-          >
-            Collapsible Sidebar Logic
-          </a>
-        </nav>
-      </aside>
-
       {/* --- Main Chat Area (Updated rendering logic) --- */}
       <main className="flex-1 flex flex-col z-10 relative">
-        <button
+        {/* <button
           onClick={() => setSidebarOpen(!isSidebarOpen)}
           className="md:absolute top-4 left-4 z-30 p-2 rounded-full bg-black/20 hover:bg-white/10 transition-colors hidden md:block"
         >
           <MenuIcon />
-        </button>
+        </button> */}
 
         <div className="flex-1 overflow-y-auto p-4 md:p-6">
           <div className="max-w-4xl mx-auto space-y-6">

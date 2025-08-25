@@ -6,6 +6,7 @@ import {
   Polygon,
   useMapEvents,
 } from "react-leaflet";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
 import FloatingLLMNav from "../components/LLMicon";
 import analyzeBBox from "../utils/script";
@@ -16,6 +17,7 @@ import "leaflet/dist/leaflet.css";
 import markerIcon2x from "leaflet/dist/images/marker-icon-2x.png";
 import markerIcon from "leaflet/dist/images/marker-icon.png";
 import markerShadow from "leaflet/dist/images/marker-shadow.png";
+import { GoogleGenAI } from "@google/genai";
 
 delete L.Icon.Default.prototype._getIconUrl;
 
@@ -118,12 +120,12 @@ const MetricsDisplay = ({ metrics }) => {
 };
 
 const AnalysisDisplay = ({ text }) => {
-  const formattedText = text.split("\n").map((line, index) => {
+  const formattedText = text?.split("\n")?.map((line, index) => {
     if (line.trim() === "") {
       return <div key={index} className="h-3" />; // Proper spacing for empty lines
     }
 
-    const parts = line.split("*").map((part, i) =>
+    const parts = line?.split("*").map((part, i) =>
       i % 2 === 1 ? (
         <strong key={i} className="text-cyan-300 font-semibold">
           {part}
@@ -150,15 +152,22 @@ const Landing = () => {
   const [insights, setInsights] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
 
+  const [followUpPrompt, setFollowUpPrompt] = useState("");
+  const [isFollowUpLoading, setIsFollowUpLoading] = useState(false);
+  const [context, setContext] = useState([]);
+
   const handleClick = async () => {
     setActiveTab("insights");
     setIsLoading(true);
     setInsights([]);
+    setContext([]);
 
     const pts = findLongestDistance(points);
     const { metrics, analysis } = await analyzeBBox(pts, {
       apiKey: import.meta.env.VITE_GEMINI_KEY,
     });
+
+    setContext([...context, analysis]);
 
     const newInsights = [
       {
@@ -177,6 +186,53 @@ const Landing = () => {
 
     setInsights(newInsights);
     setIsLoading(false);
+  };
+
+  const handleFollowUp = async (e) => {
+    e.preventDefault();
+    if (!followUpPrompt.trim()) return;
+
+    setIsFollowUpLoading(true);
+
+    try {
+      const apiKey = import.meta.env.VITE_GEMINI_KEY;
+      if (!apiKey) {
+        throw new Error("API key is missing.");
+      }
+      const ai = new GoogleGenAI({ apiKey });
+      const fullPrompt = `
+      Previous analysis context:
+      ---
+      ${context.join("\n\n")}
+      ---
+      Based on the context above, answer the following question. Do not refer to the prompt itself, just provide the answer as if continuing the conversation.
+      Question: "${followUpPrompt}"
+    `;
+      const response = await ai.models.generateContent({
+        model: "gemini-2.0-flash",
+        contents: fullPrompt,
+      });
+
+      const cand = response?.candidates?.[0];
+      const text = cand?.content?.parts?.[0]?.text ?? "";
+      
+      const newInsight = {
+        id: `follow-up-${Date.now()}`,
+        type: "analysis",
+        title: `Follow-up: "${followUpPrompt}"`,
+        content: <AnalysisDisplay text={text} />,
+      };
+
+      setInsights((prevInsights) => [...prevInsights, newInsight]);
+      setContext((prevContext) => [...prevContext, text]);
+
+      setFollowUpPrompt("");
+    } catch (error) {
+      console.error("Error calling Gemini API:", error?.message);
+      alert("Sorry, there was an error processing your request.");
+    } finally {
+      setIsFollowUpLoading(false);
+    }
   };
 
   const addPoint = (latlng) => {
@@ -411,7 +467,7 @@ const Landing = () => {
 
           {/* INSIGHTS TAB */}
           {activeTab === "insights" && (
-            <div className="p-6">
+            <div className="p-6 h-full flex flex-col">
               {isLoading ? (
                 <div className="flex flex-col items-center justify-center h-full gap-6 py-20">
                   <div className="relative">
@@ -428,27 +484,67 @@ const Landing = () => {
                   </div>
                 </div>
               ) : insights.length > 0 ? (
-                <div className="space-y-8">
-                  {insights.map((item) => (
-                    <div key={item.id} className="space-y-4">
-                      <div className="flex items-center space-x-3">
-                        <div className="w-1.5 h-1.5 bg-gradient-to-r from-cyan-400 to-blue-400 rounded-full"></div>
-                        <h3 className="text-lg font-semibold text-white">
-                          {item.title}
-                        </h3>
+                <>
+                  {/* Scrollable container for insights */}
+                  <div className="flex-grow space-y-8 overflow-y-auto pr-2">
+                    {insights.map((item) => (
+                      <div key={item.id} className="space-y-4">
+                        <div className="flex items-center space-x-3">
+                          <div className="w-1.5 h-1.5 bg-gradient-to-r from-cyan-400 to-blue-400 rounded-full"></div>
+                          <h3 className="text-lg font-semibold text-white">
+                            {item.title}
+                          </h3>
+                        </div>
+                        <div
+                          className={`${
+                            item.type === "analysis"
+                              ? "bg-black/60 backdrop-blur-sm border border-slate-700/50 rounded-xl p-6"
+                              : ""
+                          }`}
+                        >
+                          {item.content}
+                        </div>
                       </div>
-                      <div
-                        className={`${
-                          item.type === "analysis"
-                            ? "bg-black/60 backdrop-blur-sm border border-slate-700/50 rounded-xl p-6"
-                            : ""
-                        }`}
+                    ))}
+                  </div>
+
+                  {/* Follow-up Input Form */}
+                  <div className="mt-6 pt-6 border-t border-slate-700/50">
+                    <form onSubmit={handleFollowUp} className="relative">
+                      <input
+                        type="text"
+                        value={followUpPrompt}
+                        onChange={(e) => setFollowUpPrompt(e.target.value)}
+                        placeholder="Ask a follow-up question..."
+                        className="w-full bg-slate-900/80 border border-slate-700/50 rounded-lg py-3 pl-4 pr-14 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-cyan-400 transition-all"
+                        disabled={isFollowUpLoading}
+                      />
+                      <button
+                        type="submit"
+                        className="absolute inset-y-0 right-0 flex items-center justify-center w-14 text-slate-400 hover:text-cyan-400 disabled:text-slate-600 disabled:cursor-not-allowed transition-colors"
+                        disabled={isFollowUpLoading || !followUpPrompt.trim()}
                       >
-                        {item.content}
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                        {isFollowUpLoading ? (
+                          <div className="w-5 h-5 border-2 border-slate-500 border-t-cyan-400 rounded-full animate-spin"></div>
+                        ) : (
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            className="h-6 w-6"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          >
+                            <path d="M5 12h14"></path>
+                            <path d="m12 5 7 7-7 7"></path>
+                          </svg>
+                        )}
+                      </button>
+                    </form>
+                  </div>
+                </>
               ) : (
                 <div className="flex flex-col items-center justify-center h-full gap-6 py-20">
                   <div className="w-20 h-20 bg-black/60 backdrop-blur-sm rounded-2xl flex items-center justify-center border border-slate-700/50">

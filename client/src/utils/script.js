@@ -146,36 +146,6 @@ function normClip(x, a, b) {
 
 // ----------------------- Gemini helper -----------------------
 async function generateGeminiAnalysis(ai, metrics, model = "gemini-2.0-flash") {
-  const areaReport =
-    "Okay, let's break down what's going on in your area. Imagine we're looking at a map together, and I'm pointing out the key things we need to know to make it even better.\n\n" +
-    "**First, the Big Picture:**\n\n" +
-    "*   We're talking about an area of about 434 square kilometers, located within the coordinates [77.1,28.55,77.3,28.75].\n\n" +
-    "**1. Infrastructure Development Status: Pretty Busy!**\n\n" +
-    "*   This place is definitely developed! We've got a lot of roads and buildings crammed into this area. The number of buildings and the road network density suggest a mature urban environment.\n" +
-    "*   **Think of it this way:** It's like a well-established city neighborhood, not a brand-new suburb.\n\n" +
-    "**2. Quality of Life Assessment: Room to Improve**\n\n" +
-    "*   Now, this is important. Our overall socio-economic score is only 27.2 out of 100. That's a flag.\n" +
-    '*   It means while we have a lot of "stuff" (roads, buildings), the actual quality of life for the people living there could be much better. We need to dig deeper into things like income levels, access to resources, and overall well-being.\n\n' +
-    "**3. Road Network Analysis: Lots of Roads, Lots of Intersections**\n\n" +
-    "*   We have a high density of roads (24.06 km/km²) and a ton of intersections (81.678 intersections/km²).\n" +
-    "*   **Translation:** Lots of ways to get around, but potentially a lot of traffic and congestion. We need to look at traffic patterns, identify bottlenecks, and think about better traffic management. This might mean smarter traffic lights, public transportation improvements, or even new road construction in strategic areas.\n\n" +
-    "**4. Commercial & Industrial Potential: Opportunities Abound**\n\n" +
-    "*   With that many buildings and people living there, there's definitely potential for more businesses.\n" +
-    "*   **But:** We need to be strategic. What kinds of businesses are missing? Are there underserved needs? We should encourage development that provides jobs and services that benefit the community.\n\n" +
-    "**5. Community Services Evaluation: More is Needed**\n\n" +
-    "*   Here's where we see a big opportunity for improvement. Our hospital and school densities are low.\n" +
-    "*   **Put simply:** Not enough hospitals (0.5368 hospitals/km²) and schools (0.3018 schools/km²) to serve the population. This is directly impacting that socio-economic score. We need to prioritize investment in these essential services.\n\n" +
-    "**6. Clear, Actionable Recommendations for Future Development:**\n\n" +
-    "Okay, here's what we need to focus on:\n\n" +
-    "*   **Boost that Socio-Economic Score:** This is the #1 priority. We need targeted programs to improve quality of life.\n" +
-    "*   **More Schools and Hospitals:** Advocate for and attract new schools and hospitals to the area. Look for opportunities to partner with existing institutions or attract new ones.\n" +
-    "*   **Traffic Management Solutions:** Study traffic patterns, implement smarter traffic light systems, and explore public transportation options. Consider dedicated bus lanes or even a light rail system if the density warrants it.\n" +
-    "*   **Targeted Business Development:** Don't just build more shops. Focus on attracting businesses that provide essential services, create jobs, and fill gaps in the community. Incentivize investment in these areas.\n" +
-    "*   **Green Spaces & Recreation:** Think about parks, green spaces, and recreational facilities. People need places to relax and connect with nature. These amenities can greatly improve the quality of life.\n\n" +
-    "**In Conclusion:**\n\n" +
-    "You've got a busy, developed area with a lot of potential. The key now is to focus on improving the quality of life for the people who live there. By strategically investing in community services, managing traffic, and encouraging the right kinds of businesses, we can turn this place into a thriving community for everyone. Let's start prioritizing these improvements and work towards a better future!";
-  return areaReport;
-  // eslint-disable-next-line no-unreachable
   if (!ai)
     return "Gemini AI analysis not configured. Provide apiKey or set useGemini=false.";
 
