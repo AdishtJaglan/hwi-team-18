@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import axios from "axios";
 
 const UserIcon = ({ className = "w-6 h-6" }) => (
   <svg
@@ -210,10 +211,93 @@ const TypingIndicator = () => (
   </div>
 );
 
+function MetricCard({ label, value, unit = "" }) {
+  const displayValue = typeof value === "number" ? value.toFixed(2) : value;
+  return (
+    <div className="bg-zinc-900/70 p-4 rounded-lg text-center shadow-lg">
+      <p className="text-sm text-zinc-400 mb-1">{label}</p>
+      <p className="text-2xl font-bold text-cyan-400">
+        {displayValue}
+        <span className="text-base font-normal text-zinc-500 ml-1">{unit}</span>
+      </p>
+    </div>
+  );
+}
+
+function CustomResponse({ data }) {
+  if (!data || !data.location || !data.gemini_insights) {
+    return (
+      <div className="text-red-400 bg-red-900/20 p-4 rounded-lg">
+        Error: Received an invalid data format.
+      </div>
+    );
+  }
+
+  const { location, osm_summary, gemini_insights } = data;
+
+  return (
+    <div className="bg-black/30 backdrop-blur-md border border-white/10 rounded-xl p-6 space-y-6">
+      <div className="border-b border-white/10 pb-4">
+        <h2 className="text-2xl font-bold text-white">
+          Analysis for <span className="text-cyan-400">{location.name}</span>
+        </h2>
+        <p className="text-sm text-zinc-400 uppercase tracking-wider">
+          {location.type}
+        </p>
+      </div>
+      <div>
+        <p className="text-zinc-300 leading-relaxed">
+          {gemini_insights.summary_text}
+        </p>
+      </div>
+      <div>
+        <h3 className="text-lg font-semibold text-zinc-200 mb-3">
+          Key Findings
+        </h3>
+        <ul className="space-y-2 list-disc list-inside text-zinc-300">
+          {gemini_insights.key_findings?.map((finding, index) => (
+            <li key={index}>{finding}</li>
+          ))}
+        </ul>
+      </div>
+      <div>
+        <h3 className="text-lg font-semibold text-zinc-200 mb-3">
+          Core Metrics
+        </h3>
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+          <MetricCard
+            label="Infrastructure Index"
+            value={osm_summary.infra_index}
+          />
+          <MetricCard label="Access Index" value={osm_summary.access_index} />
+          <MetricCard label="Socio Score" value={osm_summary.socio_score} />
+          <MetricCard
+            label="Road Density"
+            value={osm_summary.road_km_per_km2}
+            unit="km/km²"
+          />
+          <MetricCard
+            label="Building Density"
+            value={osm_summary.buildings_per_km2}
+            unit="bldgs/km²"
+          />
+          <MetricCard
+            label="Total Buildings"
+            value={osm_summary.building_count}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// --- Main Chat Application Component (Updated) ---
+
 export default function ChatApp() {
   const [messages, setMessages] = useState([
     {
       role: "model",
+      type: "text",
       content: "Hello! I'm an AI assistant. How can I help you today?",
     },
   ]);
@@ -227,42 +311,56 @@ export default function ChatApp() {
   }, [messages, isLoading]);
 
   const fetchModelResponse = async (userMessage) => {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        const lowerCaseMessage = userMessage.toLowerCase();
-        let response = `I've processed your request: "${userMessage}". As a demo, I provide canned responses. For a real application, I would connect to a powerful language model to give you a detailed and accurate answer.`;
-
-        if (lowerCaseMessage.includes("react")) {
-          response =
-            "React is a popular open-source JavaScript library for building user interfaces, particularly for single-page applications. It allows developers to create reusable UI components and manage application state efficiently. It was created by Facebook and is now maintained by a community of developers.";
-        } else if (
-          lowerCaseMessage.includes("hello") ||
-          lowerCaseMessage.includes("hi")
-        ) {
-          response = "Hello there! It's great to connect. What's on your mind?";
-        } else if (lowerCaseMessage.includes("tailwind")) {
-          response =
-            "Tailwind CSS is a utility-first CSS framework for rapidly building custom user interfaces. Unlike other frameworks that come with pre-styled components, Tailwind provides low-level utility classes that let you build completely custom designs without ever leaving your HTML.";
+    try {
+      const response = await axios.post(
+        `${import.meta.env.VITE_API_URL}/send_query/`,
+        {
+          query: userMessage,
         }
-        resolve(response);
-      }, 1500);
-    });
+      );
+      return response.data;
+    } catch (error) {
+      console.error("API Error:", error);
+      return {
+        error: true,
+        message: "Sorry, something went wrong. Please try again.",
+      };
+    }
   };
 
   const handleSendMessage = async (e) => {
     e.preventDefault();
     if (!input.trim() || isLoading) return;
-    const userMessage = { role: "user", content: input };
+
+    const userMessage = { role: "user", type: "text", content: input };
     setMessages((prev) => [...prev, userMessage]);
     setInput("");
     setIsLoading(true);
+
     const modelResponse = await fetchModelResponse(input);
-    setMessages((prev) => [...prev, { role: "model", content: modelResponse }]);
+
+    let newModelMessage;
+    if (modelResponse.error) {
+      newModelMessage = {
+        role: "model",
+        type: "text",
+        content: modelResponse.message,
+      };
+    } else {
+      newModelMessage = {
+        role: "model",
+        type: "custom",
+        content: modelResponse,
+      };
+    }
+
+    setMessages((prev) => [...prev, newModelMessage]);
     setIsLoading(false);
   };
 
   return (
     <div className="flex h-screen min-w-screen bg-zinc-950 text-zinc-200 font-sans overflow-hidden">
+      {/* Background styles remain the same */}
       <div
         className="absolute inset-0 z-0 opacity-20"
         style={{
@@ -274,7 +372,7 @@ export default function ChatApp() {
       />
       <div className="absolute inset-0 z-0 bg-gradient-to-b from-transparent via-transparent to-black" />
 
-      {/* --- Collapsible Sidebar --- */}
+      {/* --- Collapsible Sidebar (unchanged) --- */}
       <aside
         className={`md:flex flex-col bg-black/30 backdrop-blur-lg border-r border-white/5 z-20 transition-all duration-300 ease-in-out overflow-hidden ${
           isSidebarOpen ? "w-72 p-4" : "w-0 p-0"
@@ -299,7 +397,7 @@ export default function ChatApp() {
         </nav>
       </aside>
 
-      {/* --- Main Chat Area --- */}
+      {/* --- Main Chat Area (Updated rendering logic) --- */}
       <main className="flex-1 flex flex-col z-10 relative">
         <button
           onClick={() => setSidebarOpen(!isSidebarOpen)}
@@ -310,15 +408,27 @@ export default function ChatApp() {
 
         <div className="flex-1 overflow-y-auto p-4 md:p-6">
           <div className="max-w-4xl mx-auto space-y-6">
-            {messages.map((msg, index) => (
-              <Message key={index} role={msg.role} content={msg.content} />
-            ))}
+            {messages?.map((msg, index) => {
+              if (msg.role === "user") {
+                return (
+                  <Message key={index} role={msg.role} content={msg.content} />
+                );
+              }
+              // For the model, check the type
+              if (msg.type === "custom") {
+                return <CustomResponse key={index} data={msg.content} />;
+              }
+              // Fallback to the standard Message component for simple text
+              return (
+                <Message key={index} role={msg.role} content={msg.content} />
+              );
+            })}
             {isLoading && <TypingIndicator />}
             <div ref={chatEndRef} />
           </div>
         </div>
 
-        {/* --- Prompt Input Area --- */}
+        {/* --- Prompt Input Area (unchanged) --- */}
         <div className="w-full p-4 md:p-6 flex justify-center items-center bg-gradient-to-t from-black/50 to-transparent">
           <form onSubmit={handleSendMessage} className="w-full max-w-4xl">
             <div className="relative flex items-center justify-center">

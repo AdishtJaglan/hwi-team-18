@@ -274,20 +274,62 @@ def extract_location_and_fetch_images(request):
 def query_insight(request):
     """
     POST body JSON: { "query": "What is the level of urbanisation in Pune?" }
-    Returns the full process_query_once result as JSON.
+    Returns a pruned JSON with only: location, osm_summary, gemini_insights
     """
     q = request.data.get("query")
     if not q:
         return Response({"error": "missing 'query' in request body"}, status=status.HTTP_400_BAD_REQUEST)
 
     try:
-        result = process_query_once(
-            q,
-            gemini_api_key="AIzaSyB30VO9snpNYH-3i2gyMNC3ZY5fLbAbwJ8",
-            save=False,
-            verbose=False
-        )
-        return Response(result, status=status.HTTP_200_OK)
+        # <-- prefer to store the API key in env or settings, not in source -->
+        gemini_api_key = os.environ.get("GEMINI_API_KEY", "AIzaSyB30VO9snpNYH-3i2gyMNC3ZY5fLbAbwJ8")
+        result = process_query_once(q, gemini_api_key=gemini_api_key, save=False, verbose=False)
+
+        # Safely extract location
+        loc = result.get("location") or {}
+        coords = loc.get("coordinates") or {}
+        location_out = {
+            "name": loc.get("name"),
+            "type": loc.get("type"),
+            "coordinates": {
+                "lat": coords.get("lat"),
+                "lon": coords.get("lon"),
+            }
+        }
+
+        # Get osm_summary from possible places (some versions keep it under analysis)
+        osm_src = (result.get("analysis") or {}).get("osm_summary") or result.get("osm_summary") or {}
+        # Only keep the keys you listed (keeps ordering readable)
+        osm_allowed = [
+            "area_km2", "road_km", "road_km_per_km2", "building_count", "buildings_per_km2",
+            "intersection_per_km2", "hospitals_per_km2", "schools_per_km2",
+            "infra_index", "access_index", "socio_score", "raw_counts"
+        ]
+        osm_summary_out = {k: osm_src.get(k) for k in osm_allowed if k in osm_src}
+
+        # Get gemini insights (also might be under analysis)
+        gem_src = (result.get("analysis") or {}).get("gemini_insights") or result.get("gemini_insights") or {}
+        gem_scores = gem_src.get("scores") or {}
+        gemini_out = {
+            "summary_text": gem_src.get("summary_text"),
+            "key_findings": gem_src.get("key_findings"),
+            "scores": {
+                # include the specific score fields you care about if present
+                "infra_index": gem_scores.get("infra_index"),
+                "access_index": gem_scores.get("access_index"),
+                "socio_score": gem_scores.get("socio_score"),
+            }
+        }
+
+        pruned = {
+            "location": location_out,
+            "osm_summary": osm_summary_out,
+            "gemini_insights": gemini_out,
+        }
+
+        return Response(pruned, status=status.HTTP_200_OK)
+
     except Exception as e:
+        # In production you might want to log the exception and return a generic message
         return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
